@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuifjol</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <header>
+            <h1>Kuifjol</h1>
+        </header>
+
+        <section class="status-panel">
+            <div class="player-card player-b" id="card-B">
+                <h2>黒木 (B)</h2>
+                <div class="score">得点: <span id="score-B">0</span> / 5</div>
+                <div class="yaku-list" id="yaku-B">役なし</div>
+            </div>
+
+            <div class="turn-indicator">
+                <p>現在の手番</p>
+                <div id="current-turn-display" class="turn-badge b-turn">黒木 (B)</div>
+            </div>
+
+            <div class="player-card player-w" id="card-W">
+                <h2>白木 (W)</h2>
+                <div class="score">得点: <span id="score-W">0</span> / 5</div>
+                <div class="yaku-list" id="yaku-W">役なし</div>
+            </div>
+        </section>
+
+        <main class="board-area">
+            <div id="board" class="board"></div>
+        </main>
+
+        <section class="controls">
+            <div class="action-selector">
+                <button class="action-btn active" data-action="place">
+                    <span class="icon">🌱</span> 伸ばす (配置)
+                </button>
+                <button class="action-btn" data-action="heal">
+                    <span class="icon">✨</span> 整える (回復)
+                </button>
+                <button class="action-btn" data-action="move">
+                    <span class="icon">🐾</span> たぐり寄せる (移動)
+                </button>
+            </div>
+            <div id="message-log" class="message-log">行動を選び、盤面のマスを選択してください。</div>
+            <button id="reset-btn" class="reset-btn">最初からやり直す</button>
+        </section>
+
+        <footer class="game-rules">
+            <h3>📜 役（役尾）の一覧</h3>
+            <ul>
+                <li><strong>大輪 (1点):</strong> 自分の正常なコマで 2×2 の正方形を作る</li>
+                <li><strong>長尾 (2点):</strong> 自分の正常なコマが 6個以上 一本に繋がる</li>
+                <li><strong>花輪 (3点):</strong> 3×3 の外枠8コマを自分の正常なコマで囲む</li>
+                <li><strong>王尾 (即勝利):</strong> 盤の端から反対側の端まで途切れず繋ぐ</li>
+            </ul>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
