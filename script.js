@@ -1,5 +1,5 @@
 const BOARD_SIZE = 8;
-const WIN_SCORE = 5;
+const WIN_SCORE = 6;
 
 class PhoelWebGame {
     constructor() {
