@@ -1,5 +1,5 @@
 const BOARD_SIZE = 8;
-const WIN_SCORE = 6;
+const WIN_SCORE = 8;
 
 class PhoelWebGame {
     constructor() {
@@ -222,9 +222,9 @@ class PhoelWebGame {
                 if (this.canPlaceAt(r, c, player)) {
                     let weight = 5;
 
-                    // 中央優先（外枠のリスクを少し下げる）
-                    const centerDist = Math.abs(r - 3) + Math.abs(c - 3);
-                    weight += (6 - centerDist);
+                    // 8x8の中央(3.5, 3.5)付近を優先
+                    const centerDist = Math.abs(r - 3.5) + Math.abs(c - 3.5);
+                    weight += (7 - centerDist);
 
                     this.board[r][c] = 'W';
                     const testScore = this.evaluatePlayer('W').score;
@@ -314,13 +314,14 @@ class PhoelWebGame {
         }
         if (hasHanawa) { score += 3; yaku.push('花輪(3点)'); }
 
-        // 4. 尾橋 (一筆書きで端から端まで貫通) = 3点
+        // 4. 王尾 (一筆書きで端から端まで貫通) = 即時勝利
         const components = this.getConnectedComponents(player);
         components.forEach(comp => {
             const rows = new Set(comp.map(([r, c]) => r));
             const cols = new Set(comp.map(([r, c]) => c));
             if (rows.size === BOARD_SIZE || cols.size === BOARD_SIZE) {
-                score += 3;
+                score += 99;
+                yaku.push('👑王尾(即時勝利)');
             }
         });
 
@@ -362,6 +363,9 @@ class PhoelWebGame {
     render() {
         const boardEl = document.getElementById('board');
         boardEl.innerHTML = '';
+        
+        // CSS Grid の列数を8にする設定
+        boardEl.style.gridTemplateColumns = `repeat(${BOARD_SIZE}, 1fr)`;
 
         for (let r = 0; r < BOARD_SIZE; r++) {
             for (let c = 0; c < BOARD_SIZE; c++) {
