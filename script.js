@@ -50,6 +50,38 @@ class PhoelWebGame {
         document.getElementById('message-log').textContent = msg;
     }
 
+    // 外枠マス（最外周）かどうかの判定
+    isOuterCell(r, c) {
+        return r === 0 || r === BOARD_SIZE - 1 || c === 0 || c === BOARD_SIZE - 1;
+    }
+
+    // 隣接（上下左右）に自分のコマがあるか
+    hasAdjacentOwnPiece(r, c, player) {
+        const messed = player.toLowerCase();
+        const dirs = [[-1,0], [1,0], [0,-1], [0,1]];
+        return dirs.some(([dr, dc]) => {
+            const nr = r + dr, nc = c + dc;
+            return nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE &&
+                   (this.board[nr][nc] === player || this.board[nr][nc] === messed);
+        });
+    }
+
+    // 配置条件チェック
+    canPlaceAt(r, c, player) {
+        if (this.board[r][c] !== '.') return false;
+
+        // 一番外枠マスの場合の制限
+        if (this.isOuterCell(r, c)) {
+            // パス後（自由配置）または初手、あるいは隣接する自コマがあれば置ける
+            return this.placedCount[player] === 0 || 
+                   this.isFreePlace[player] || 
+                   this.hasAdjacentOwnPiece(r, c, player);
+        }
+
+        // 内側マスならどこでも配置可能
+        return true;
+    }
+
     handleCellClick(r, c) {
         if (this.isGameOver || this.currentPlayer === 'W') return;
 
@@ -57,17 +89,12 @@ class PhoelWebGame {
         const messed = 'b';
 
         if (this.currentAction === 'place') {
-            if (this.board[r][c] !== '.') {
-                this.log('❌ そこにはすでにコマがあります。');
-                return;
-            }
-
-            const canPlace = this.placedCount[player] === 0 || 
-                             this.isFreePlace[player] || 
-                             this.hasAdjacentOwnPiece(r, c, player);
-
-            if (!canPlace) {
-                this.log('❌ 自分のコマに隣接するマスにしか置けません。');
+            if (!this.canPlaceAt(r, c, player)) {
+                if (this.board[r][c] !== '.') {
+                    this.log('❌ そこにはすでにコマがあります。');
+                } else if (this.isOuterCell(r, c)) {
+                    this.log('❌ 一番外枠のマスは、自分のコマに隣接する場所にしか置けません。');
+                }
                 return;
             }
 
@@ -115,24 +142,11 @@ class PhoelWebGame {
         }
     }
 
-    hasAdjacentOwnPiece(r, c, player) {
-        const messed = player.toLowerCase();
-        const dirs = [[-1,0], [1,0], [0,-1], [0,1]];
-        return dirs.some(([dr, dc]) => {
-            const nr = r + dr, nc = c + dc;
-            return nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE &&
-                   (this.board[nr][nc] === player || this.board[nr][nc] === messed);
-        });
-    }
-
+    // 配置可能マスがどこかにあるかチェック
     canPlayerPlaceAnywhere(player) {
-        if (this.placedCount[player] === 0 || this.isFreePlace[player]) return true;
-
         for (let r = 0; r < BOARD_SIZE; r++) {
             for (let c = 0; c < BOARD_SIZE; c++) {
-                if (this.board[r][c] === '.' && this.hasAdjacentOwnPiece(r, c, player)) {
-                    return true;
-                }
+                if (this.canPlaceAt(r, c, player)) return true;
             }
         }
         return false;
@@ -169,11 +183,9 @@ class PhoelWebGame {
             return;
         }
 
-        // 次の手番へ
         this.currentPlayer = this.currentPlayer === 'B' ? 'W' : 'B';
         this.render();
 
-        // CPUの手番処理
         if (this.currentPlayer === 'W' && !this.isGameOver) {
             this.log('🤖 CPUが考えています...');
             setTimeout(() => this.playCPUTurn(), 800);
@@ -181,12 +193,11 @@ class PhoelWebGame {
     }
 
     /* ----------------------------------
-       CPU (白木) の自動思考 AI
+       CPU (白木) の思考AI
        ---------------------------------- */
     playCPUTurn() {
         const player = 'W';
 
-        // パスチェック
         if (!this.canPlayerPlaceAnywhere(player)) {
             this.isFreePlace[player] = true;
             this.log('⚠️ CPUは置けるマスがありません！パスします。');
@@ -196,7 +207,7 @@ class PhoelWebGame {
 
         let possibleMoves = [];
 
-        // 1. 乱れた自分のコマを治す手（優先度高）
+        // 1. 回復（乱れコマの治療）
         for (let r = 0; r < BOARD_SIZE; r++) {
             for (let c = 0; c < BOARD_SIZE; c++) {
                 if (this.board[r][c] === 'w') {
@@ -205,34 +216,26 @@ class PhoelWebGame {
             }
         }
 
-        // 2. 配置の手候補の収集
+        // 2. 配置の手の評価
         for (let r = 0; r < BOARD_SIZE; r++) {
             for (let c = 0; c < BOARD_SIZE; c++) {
-                if (this.board[r][c] === '.') {
-                    const canPlace = this.placedCount[player] === 0 || 
-                                     this.isFreePlace[player] || 
-                                     this.hasAdjacentOwnPiece(r, c, player);
+                if (this.canPlaceAt(r, c, player)) {
+                    let weight = 5;
 
-                    if (canPlace) {
-                        // 仮置きして得点変化や挟み込みをシミュレーション評価
-                        let weight = 5;
-                        
-                        // 中央付近を少し評価高めに
-                        const centerDist = Math.abs(r - 3) + Math.abs(c - 3);
-                        weight += (6 - centerDist);
+                    // 中央付近優先
+                    const centerDist = Math.abs(r - 3) + Math.abs(c - 3);
+                    weight += (6 - centerDist);
 
-                        this.board[r][c] = 'W';
-                        const testScore = this.evaluatePlayer('W').score;
-                        weight += testScore * 10; // 得点が増える手を強く選ぶ
-                        this.board[r][c] = '.';
+                    this.board[r][c] = 'W';
+                    const testScore = this.evaluatePlayer('W').score;
+                    weight += testScore * 12; // 役が完成する手を強く好む
+                    this.board[r][c] = '.';
 
-                        possibleMoves.push({ action: 'place', r, c, weight });
-                    }
+                    possibleMoves.push({ action: 'place', r, c, weight });
                 }
             }
         }
 
-        // 候補から最も重みの高い行動を選択（同率ならランダム）
         if (possibleMoves.length > 0) {
             possibleMoves.sort((a, b) => b.weight - a.weight);
             const bestMove = possibleMoves[0];
@@ -245,7 +248,7 @@ class PhoelWebGame {
                 this.placedCount[player]++;
                 this.isFreePlace[player] = false;
                 this.applyFlanking(bestMove.r, bestMove.c, player);
-                this.log(`🤖 CPUが (${bestMove.r},${bestMove.c}) にコマを伸ばしました。`);
+                this.log(`🤖 CPUが (${bestMove.r},${bestMove.c}) にコマを置きました。`);
             }
         }
 
@@ -253,45 +256,64 @@ class PhoelWebGame {
     }
 
     evaluatePlayer(player) {
-        const components = this.getConnectedComponents(player);
         let score = 0;
         let yaku = [];
 
+        // 1. 大輪 (2x2の正方形) = 1点
+        let hasTairin = false;
+        for (let r = 0; r < BOARD_SIZE - 1; r++) {
+            for (let c = 0; c < BOARD_SIZE - 1; c++) {
+                if (this.board[r][c] === player && this.board[r+1][c] === player &&
+                    this.board[r][c+1] === player && this.board[r+1][c+1] === player) {
+                    hasTairin = true;
+                }
+            }
+        }
+        if (hasTairin) { score += 1; yaku.push('大輪(1点)'); }
+
+        // 2. 長尾 (直線で6コマ以上連なる) = 2点 ★修正★
+        let hasNagao = false;
+        const directions = [[0, 1], [1, 0], [1, 1], [1, -1]]; // 横, 縦, 斜め下右, 斜め下左
+
+        for (let r = 0; r < BOARD_SIZE; r++) {
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                if (this.board[r][c] !== player) continue;
+
+                directions.forEach(([dr, dc]) => {
+                    let count = 0;
+                    for (let step = 0; step < 6; step++) {
+                        const nr = r + dr * step;
+                        const nc = c + dc * step;
+                        if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
+                            if (this.board[nr][nc] === player) count++;
+                            else break;
+                        } else break;
+                    }
+                    if (count >= 6) hasNagao = true;
+                });
+            }
+        }
+        if (hasNagao) { score += 2; yaku.push('長尾(2点)'); }
+
+        // 3. 花輪 (3x3の外枠8コマ) = 3点
+        let hasHanawa = false;
+        for (let r = 0; r < BOARD_SIZE - 2; r++) {
+            for (let c = 0; c < BOARD_SIZE - 2; c++) {
+                let outerCount = 0;
+                for (let dr = 0; dr < 3; dr++) {
+                    for (let dc = 0; dc < 3; dc++) {
+                        if (dr === 1 && dc === 1) continue;
+                        if (this.board[r+dr][c+dc] === player) outerCount++;
+                    }
+                }
+                if (outerCount === 8 && this.board[r+1][c+1] !== player) hasHanawa = true;
+            }
+        }
+        if (hasHanawa) { score += 3; yaku.push('花輪(3点)'); }
+
+        // 4. 王尾 (一筆書きで端から端まで貫通) = 即時勝利
+        const components = this.getConnectedComponents(player);
         components.forEach(comp => {
-            const compSet = new Set(comp.map(([r, c]) => `${r},${c}`));
-
-            // 1. 大輪 (2x2) = 1点
-            let hasTairin = false;
-            for (let r = 0; r < BOARD_SIZE - 1; r++) {
-                for (let c = 0; c < BOARD_SIZE - 1; c++) {
-                    if (compSet.has(`${r},${c}`) && compSet.has(`${r+1},${c}`) &&
-                        compSet.has(`${r},${c+1}`) && compSet.has(`${r+1},${c+1}`)) {
-                        hasTairin = true;
-                    }
-                }
-            }
-            if (hasTairin) { score += 1; yaku.push('大輪(1点)'); }
-
-            // 2. 長尾 (6連結以上) = 2点
-            if (comp.length >= 6) { score += 2; yaku.push('長尾(2点)'); }
-
-            // 3. 花輪 (3x3の外枠8コマ) = 3点
-            let hasHanawa = false;
-            for (let r = 0; r < BOARD_SIZE - 2; r++) {
-                for (let c = 0; c < BOARD_SIZE - 2; c++) {
-                    let outerCount = 0;
-                    for (let dr = 0; dr < 3; dr++) {
-                        for (let dc = 0; dc < 3; dc++) {
-                            if (dr === 1 && dc === 1) continue;
-                            if (compSet.has(`${r+dr},${c+dc}`)) outerCount++;
-                        }
-                    }
-                    if (outerCount === 8 && this.board[r+1][c+1] !== player) hasHanawa = true;
-                }
-            }
-            if (hasHanawa) { score += 3; yaku.push('花輪(3点)'); }
-
-            // 4. 王尾 (端から端まで貫通) = 即時勝利
             const rows = new Set(comp.map(([r, c]) => r));
             const cols = new Set(comp.map(([r, c]) => c));
             if (rows.size === BOARD_SIZE || cols.size === BOARD_SIZE) {
