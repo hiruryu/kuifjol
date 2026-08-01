@@ -1,5 +1,5 @@
 const BOARD_SIZE = 8;
-const WIN_SCORE = 8;
+const WIN_SCORE = 12;
 
 class PhoelWebGame {
     constructor() {
@@ -255,28 +255,35 @@ class PhoelWebGame {
         this.endTurn();
     }
 
-    /* ----------------------------------
-       役の評価処理
+/* ----------------------------------
+       役の評価処理（複数完成・重複カウント対応版）
        ---------------------------------- */
     evaluatePlayer(player) {
         let score = 0;
         let yaku = [];
 
-        // 1. 大輪 (2x2の正方形) = 1点
-        let hasTairin = false;
+        // 1. 大輪 (2x2の正方形) = 1点 (個数分加算)
+        let tairinCount = 0;
         for (let r = 0; r < BOARD_SIZE - 1; r++) {
             for (let c = 0; c < BOARD_SIZE - 1; c++) {
                 if (this.board[r][c] === player && this.board[r+1][c] === player &&
                     this.board[r][c+1] === player && this.board[r+1][c+1] === player) {
-                    hasTairin = true;
+                    tairinCount++;
                 }
             }
         }
-        if (hasTairin) { score += 1; yaku.push('大輪(1点)'); }
+        if (tairinCount > 0) {
+            score += tairinCount * 1;
+            yaku.push(`大輪×${tairinCount}(${tairinCount}点)`);
+        }
 
-        // 2. 長尾 (直線で6コマ以上連なる) = 2点
-        let hasNagao = false;
-        const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+        // 2. 長尾 (直線で6コマ以上連なる) = 2点 (個数分加算)
+        // ※重複カウントを防ぐため、既にカウントしたマス・方向を考慮
+        let nagaoCount = 0;
+        const directions = [[0, 1], [1, 0], [1, 1], [1, -1]]; // 横, 縦, 斜め下右, 斜め下左
+
+        // 一直線で6個並んでいる始点と方向を記録して重複重複を防止
+        let foundNagaos = new Set();
 
         for (let r = 0; r < BOARD_SIZE; r++) {
             for (let c = 0; c < BOARD_SIZE; c++) {
@@ -292,14 +299,30 @@ class PhoelWebGame {
                             else break;
                         } else break;
                     }
-                    if (count >= 6) hasNagao = true;
+                    // 6連以上あれば長尾として1カウント
+                    if (count >= 6) {
+                        // 始点と方向の組み合わせで一意に特定
+                        const key = `${r},${c}_${dr},${dc}`;
+                        // 直前（1歩手前）も自コマなら、すでに長い連鎖の一部としてカウント済みなのでスキップ
+                        const prevR = r - dr;
+                        const prevC = c - dc;
+                        const isPrevOwn = (prevR >= 0 && prevR < BOARD_SIZE && prevC >= 0 && prevC < BOARD_SIZE && this.board[prevR][prevC] === player);
+                        
+                        if (!isPrevOwn && !foundNagaos.has(key)) {
+                            foundNagaos.add(key);
+                            nagaoCount++;
+                        }
+                    }
                 });
             }
         }
-        if (hasNagao) { score += 2; yaku.push('長尾(2点)'); }
+        if (nagaoCount > 0) {
+            score += nagaoCount * 2;
+            yaku.push(`長尾×${nagaoCount}(${nagaoCount * 2}点)`);
+        }
 
-        // 3. 花輪 (3x3の外枠8コマ) = 3点
-        let hasHanawa = false;
+        // 3. 花輪 (3x3の外枠8コマ) = 3点 (個数分加算)
+        let hanawaCount = 0;
         for (let r = 0; r < BOARD_SIZE - 2; r++) {
             for (let c = 0; c < BOARD_SIZE - 2; c++) {
                 let outerCount = 0;
@@ -309,21 +332,29 @@ class PhoelWebGame {
                         if (this.board[r+dr][c+dc] === player) outerCount++;
                     }
                 }
-                if (outerCount === 8 && this.board[r+1][c+1] !== player) hasHanawa = true;
+                if (outerCount === 8 && this.board[r+1][c+1] !== player) {
+                    hanawaCount++;
+                }
             }
         }
-        if (hasHanawa) { score += 3; yaku.push('花輪(3点)'); }
+        if (hanawaCount > 0) {
+            score += hanawaCount * 3;
+            yaku.push(`花輪×${hanawaCount}(${hanawaCount * 3}点)`);
+        }
 
-        // 4. 王尾 (一筆書きで端から端まで貫通) = 即時勝利
+        // 4. 王尾 (一筆書きで端から端まで貫通) = 4点
         const components = this.getConnectedComponents(player);
+        let hasOoo = false;
         components.forEach(comp => {
             const rows = new Set(comp.map(([r, c]) => r));
             const cols = new Set(comp.map(([r, c]) => c));
             if (rows.size === BOARD_SIZE || cols.size === BOARD_SIZE) {
-                score += 99;
-                yaku.push('👑王尾(即時勝利)');
+                hasOoo = true;
             }
         });
+        if (hasOoo) {
+            score += 4;
+        }
 
         return { score, yaku };
     }
