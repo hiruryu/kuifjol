@@ -1,7 +1,3 @@
-/* ==========================================
-   フォエル (Phoel) - ロジック実装
-   ========================================== */
-
 const BOARD_SIZE = 5;
 const WIN_SCORE = 5;
 
@@ -178,7 +174,7 @@ class PhoelWebGame {
                     }
                 }
             }
-            if (hasTairin) { score += 3; yaku.push('大輪'); }
+            if (hasTairin) { score += 1; yaku.push('大輪'); }
 
             // 2. 長尾 (6連結以上)
             if (comp.length >= 6) { score += 2; yaku.push('長尾'); }
@@ -197,7 +193,7 @@ class PhoelWebGame {
                     if (outerCount === 8 && this.board[r+1][c+1] !== player) hasHanawa = true;
                 }
             }
-            if (hasHanawa) { score += 5; yaku.push('花輪'); }
+            if (hasHanawa) { score += 3; yaku.push('花輪'); }
 
             // 4. 王尾 (端から端まで貫通)
             const rows = new Set(comp.map(([r, c]) => r));
