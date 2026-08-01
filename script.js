@@ -1,4 +1,4 @@
-const BOARD_SIZE = 5;
+const BOARD_SIZE = 7;
 const WIN_SCORE = 5;
 
 class PhoelWebGame {
@@ -6,16 +6,16 @@ class PhoelWebGame {
         this.board = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill('.'));
         this.currentPlayer = 'B';
         this.placedCount = { 'B': 0, 'W': 0 };
-        this.currentAction = 'place'; // 'place', 'heal', 'move'
-        this.selectedCell = null; // 移動元用
+        this.currentAction = 'place';
+        this.selectedCell = null;
         this.isGameOver = false;
+        this.isFreePlace = { 'B': false, 'W': false }; // パス後の自由配置フラグ
 
         this.initUI();
         this.render();
     }
 
     initUI() {
-        // アクション切替ボタン
         document.querySelectorAll('.action-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 if (this.isGameOver) return;
@@ -29,7 +29,6 @@ class PhoelWebGame {
             });
         });
 
-        // リセットボタン
         document.getElementById('reset-btn').addEventListener('click', () => {
             this.resetGame();
         });
@@ -42,6 +41,7 @@ class PhoelWebGame {
         this.currentAction = 'place';
         this.selectedCell = null;
         this.isGameOver = false;
+        this.isFreePlace = { 'B': false, 'W': false };
         this.log('ゲームを開始しました。黒木 (B) の手番です。');
         this.render();
     }
@@ -61,13 +61,20 @@ class PhoelWebGame {
                 this.log('❌ そこにはすでにコマがあります。');
                 return;
             }
-            if (this.placedCount[player] > 0 && !this.hasAdjacentOwnPiece(r, c, player)) {
+
+            // 初手、またはパス直後(自由配置)、または隣接コマがある場合に配置可能
+            const canPlace = this.placedCount[player] === 0 || 
+                             this.isFreePlace[player] || 
+                             this.hasAdjacentOwnPiece(r, c, player);
+
+            if (!canPlace) {
                 this.log('❌ 自分のしっぽ（コマ）に隣接するマスにしか置けません。');
                 return;
             }
 
             this.board[r][c] = player;
             this.placedCount[player]++;
+            this.isFreePlace[player] = false; // 自由配置権を消費
             this.applyFlanking(r, c, player);
             this.endTurn();
 
@@ -119,6 +126,20 @@ class PhoelWebGame {
         });
     }
 
+    // 配置できる場所があるか判定
+    canPlayerPlaceAnywhere(player) {
+        if (this.placedCount[player] === 0 || this.isFreePlace[player]) return true;
+
+        for (let r = 0; r < BOARD_SIZE; r++) {
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                if (this.board[r][c] === '.' && this.hasAdjacentOwnPiece(r, c, player)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     applyFlanking(r, c, player) {
         const opponent = player === 'B' ? 'W' : 'B';
         const opponentMessed = opponent.toLowerCase();
@@ -140,7 +161,6 @@ class PhoelWebGame {
     }
 
     endTurn() {
-        // 判定＆手番交代
         const scoreB = this.evaluatePlayer('B');
         const scoreW = this.evaluatePlayer('W');
 
@@ -152,7 +172,16 @@ class PhoelWebGame {
             return;
         }
 
-        this.currentPlayer = this.currentPlayer === 'B' ? 'W' : 'B';
+        // 次のプレイヤーに手番交代
+        const nextPlayer = this.currentPlayer === 'B' ? 'W' : 'B';
+        this.currentPlayer = nextPlayer;
+
+        // パス判定（配置・回復・移動の全てが不可能な場合、または置き場所がない場合）
+        if (!this.canPlayerPlaceAnywhere(nextPlayer)) {
+            this.isFreePlace[nextPlayer] = true; // 次のターンは自由配置を許可
+            this.log(`⚠️ ${nextPlayer === 'B' ? '黒木' : '白木'}は置けるマスがありません！パスとなり次の手番は自由に置けます。`);
+        }
+
         this.render();
     }
 
@@ -164,7 +193,7 @@ class PhoelWebGame {
         components.forEach(comp => {
             const compSet = new Set(comp.map(([r, c]) => `${r},${c}`));
 
-            // 1. 大輪 (2x2)
+            // 1. 大輪 (2x2) = 1点
             let hasTairin = false;
             for (let r = 0; r < BOARD_SIZE - 1; r++) {
                 for (let c = 0; c < BOARD_SIZE - 1; c++) {
@@ -174,12 +203,12 @@ class PhoelWebGame {
                     }
                 }
             }
-            if (hasTairin) { score += 1; yaku.push('大輪'); }
+            if (hasTairin) { score += 1; yaku.push('大輪(1点)'); }
 
-            // 2. 長尾 (6連結以上)
-            if (comp.length >= 6) { score += 2; yaku.push('長尾'); }
+            // 2. 長尾 (6連結以上) = 2点
+            if (comp.length >= 6) { score += 2; yaku.push('長尾(2点)'); }
 
-            // 3. 花輪 (3x3の外枠8コマ)
+            // 3. 花輪 (3x3の外枠8コマ) = 3点
             let hasHanawa = false;
             for (let r = 0; r < BOARD_SIZE - 2; r++) {
                 for (let c = 0; c < BOARD_SIZE - 2; c++) {
@@ -193,14 +222,14 @@ class PhoelWebGame {
                     if (outerCount === 8 && this.board[r+1][c+1] !== player) hasHanawa = true;
                 }
             }
-            if (hasHanawa) { score += 3; yaku.push('花輪'); }
+            if (hasHanawa) { score += 3; yaku.push('花輪(3点)'); }
 
-            // 4. 王尾 (端から端まで貫通)
+            // 4. 王尾 (端から端まで貫通) = 即時勝利
             const rows = new Set(comp.map(([r, c]) => r));
             const cols = new Set(comp.map(([r, c]) => c));
             if (rows.size === BOARD_SIZE || cols.size === BOARD_SIZE) {
                 score += 99;
-                yaku.push('👑王尾');
+                yaku.push('👑王尾(即時勝利)');
             }
         });
 
@@ -240,7 +269,6 @@ class PhoelWebGame {
     }
 
     render() {
-        // 盤面描画
         const boardEl = document.getElementById('board');
         boardEl.innerHTML = '';
 
@@ -267,7 +295,6 @@ class PhoelWebGame {
             }
         }
 
-        // スコア＆役表示
         const resB = this.evaluatePlayer('B');
         const resW = this.evaluatePlayer('W');
 
@@ -276,7 +303,6 @@ class PhoelWebGame {
         document.getElementById('yaku-B').textContent = resB.yaku.length > 0 ? resB.yaku.join(', ') : '役なし';
         document.getElementById('yaku-W').textContent = resW.yaku.length > 0 ? resW.yaku.join(', ') : '役なし';
 
-        // 手番表示
         const turnBadge = document.getElementById('current-turn-display');
         if (this.currentPlayer === 'B') {
             turnBadge.textContent = '黒木 (B)';
@@ -288,7 +314,6 @@ class PhoelWebGame {
     }
 }
 
-// ページロード時にゲーム起動
 window.addEventListener('DOMContentLoaded', () => {
     new PhoelWebGame();
 });
