@@ -1,5 +1,3 @@
-
-
 :root {
     --bg-wood: #2c1a0e;
     --board-wood: #8c5a2b;
@@ -7,8 +5,6 @@
     --cell-bg: #aa733c;
     --cell-hover: #c98a4b;
     --text-gold: #f1d38e;
-    --piece-black: #1a1a1a;
-    --piece-white: #f0ebd8;
     --messed-overlay: #d9534f;
 }
 
@@ -49,7 +45,6 @@ header h1 {
     font-style: italic;
 }
 
-/* ステータスパネル */
 .status-panel {
     display: flex;
     justify-content: space-between;
@@ -67,7 +62,7 @@ header h1 {
     background: rgba(255, 255, 255, 0.05);
 }
 
-.player-card h2 { margin: 0 0 4px; font-size: 1.1rem; }
+.player-card h2 { margin: 0 0 4px; font-size: 1rem; }
 .player-b h2 { color: #88d4f4; }
 .player-w h2 { color: #f4be88; }
 
@@ -84,7 +79,7 @@ header h1 {
     padding: 6px 12px;
     border-radius: 20px;
     font-weight: bold;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
 }
 
 .turn-badge.b-turn {
@@ -99,7 +94,6 @@ header h1 {
     border: 1px solid #5c3a1b;
 }
 
-/* 盤面 (7x7用に最適化) */
 .board-area {
     display: flex;
     justify-content: center;
@@ -138,7 +132,6 @@ header h1 {
     transform: scale(0.95);
 }
 
-/* コマ表現 */
 .piece {
     width: 82%;
     height: 82%;
@@ -161,7 +154,6 @@ header h1 {
     color: #333;
 }
 
-/* 乱れコマ */
 .piece.messed {
     opacity: 0.7;
     border: 2px dashed var(--messed-overlay);
@@ -173,7 +165,6 @@ header h1 {
     position: absolute;
 }
 
-/* アクションボタン */
 .action-selector {
     display: flex;
     gap: 8px;
@@ -220,7 +211,6 @@ header h1 {
 
 .reset-btn:hover { background: #a83232; }
 
-/* ルール解説スタイル */
 .game-rules {
     margin-top: 24px;
     text-align: left;
