@@ -4,12 +4,12 @@ const WIN_SCORE = 5;
 class PhoelWebGame {
     constructor() {
         this.board = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill('.'));
-        this.currentPlayer = 'B';
+        this.currentPlayer = 'B'; // B: プレイヤー(黒木), W: CPU(白木)
         this.placedCount = { 'B': 0, 'W': 0 };
         this.currentAction = 'place';
         this.selectedCell = null;
         this.isGameOver = false;
-        this.isFreePlace = { 'B': false, 'W': false }; // パス後の自由配置フラグ
+        this.isFreePlace = { 'B': false, 'W': false };
 
         this.initUI();
         this.render();
@@ -18,7 +18,7 @@ class PhoelWebGame {
     initUI() {
         document.querySelectorAll('.action-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                if (this.isGameOver) return;
+                if (this.isGameOver || this.currentPlayer === 'W') return;
                 document.querySelectorAll('.action-btn').forEach(b => b.classList.remove('active'));
                 const target = e.currentTarget;
                 target.classList.add('active');
@@ -42,7 +42,7 @@ class PhoelWebGame {
         this.selectedCell = null;
         this.isGameOver = false;
         this.isFreePlace = { 'B': false, 'W': false };
-        this.log('ゲームを開始しました。黒木 (B) の手番です。');
+        this.log('対戦を開始しました。あなたの番（黒木）です。');
         this.render();
     }
 
@@ -51,10 +51,10 @@ class PhoelWebGame {
     }
 
     handleCellClick(r, c) {
-        if (this.isGameOver) return;
+        if (this.isGameOver || this.currentPlayer === 'W') return;
 
-        const player = this.currentPlayer;
-        const messed = player.toLowerCase();
+        const player = 'B';
+        const messed = 'b';
 
         if (this.currentAction === 'place') {
             if (this.board[r][c] !== '.') {
@@ -62,19 +62,18 @@ class PhoelWebGame {
                 return;
             }
 
-            // 初手、またはパス直後(自由配置)、または隣接コマがある場合に配置可能
             const canPlace = this.placedCount[player] === 0 || 
                              this.isFreePlace[player] || 
                              this.hasAdjacentOwnPiece(r, c, player);
 
             if (!canPlace) {
-                this.log('❌ 自分のしっぽ（コマ）に隣接するマスにしか置けません。');
+                this.log('❌ 自分のコマに隣接するマスにしか置けません。');
                 return;
             }
 
             this.board[r][c] = player;
             this.placedCount[player]++;
-            this.isFreePlace[player] = false; // 自由配置権を消費
+            this.isFreePlace[player] = false;
             this.applyFlanking(r, c, player);
             this.endTurn();
 
@@ -126,7 +125,6 @@ class PhoelWebGame {
         });
     }
 
-    // 配置できる場所があるか判定
     canPlayerPlaceAnywhere(player) {
         if (this.placedCount[player] === 0 || this.isFreePlace[player]) return true;
 
@@ -154,7 +152,6 @@ class PhoelWebGame {
                 const end = this.board[r2][c2];
                 if ((mid === opponent || mid === opponentMessed) && (end === player || end === player.toLowerCase())) {
                     this.board[r1][c1] = opponentMessed;
-                    this.log(`✨ 相手のコマを挟んで毛並みを乱しました！`);
                 }
             }
         });
@@ -167,22 +164,92 @@ class PhoelWebGame {
         if (scoreB.score >= WIN_SCORE || scoreW.score >= WIN_SCORE) {
             this.isGameOver = true;
             this.render();
-            const winner = scoreB.score >= WIN_SCORE ? '黒木 (B)' : '白木 (W)';
-            this.log(`🎉 祝！ ${winner} が勝利しました！`);
+            const winner = scoreB.score >= WIN_SCORE ? 'あなた (黒木)' : 'CPU (白木)';
+            this.log(`🎉 祝！ ${winner} の勝利です！`);
             return;
         }
 
-        // 次のプレイヤーに手番交代
-        const nextPlayer = this.currentPlayer === 'B' ? 'W' : 'B';
-        this.currentPlayer = nextPlayer;
+        // 次の手番へ
+        this.currentPlayer = this.currentPlayer === 'B' ? 'W' : 'B';
+        this.render();
 
-        // パス判定（配置・回復・移動の全てが不可能な場合、または置き場所がない場合）
-        if (!this.canPlayerPlaceAnywhere(nextPlayer)) {
-            this.isFreePlace[nextPlayer] = true; // 次のターンは自由配置を許可
-            this.log(`⚠️ ${nextPlayer === 'B' ? '黒木' : '白木'}は置けるマスがありません！パスとなり次の手番は自由に置けます。`);
+        // CPUの手番処理
+        if (this.currentPlayer === 'W' && !this.isGameOver) {
+            this.log('🤖 CPUが考えています...');
+            setTimeout(() => this.playCPUTurn(), 800);
+        }
+    }
+
+    /* ----------------------------------
+       CPU (白木) の自動思考 AI
+       ---------------------------------- */
+    playCPUTurn() {
+        const player = 'W';
+
+        // パスチェック
+        if (!this.canPlayerPlaceAnywhere(player)) {
+            this.isFreePlace[player] = true;
+            this.log('⚠️ CPUは置けるマスがありません！パスします。');
+            this.endTurn();
+            return;
         }
 
-        this.render();
+        let possibleMoves = [];
+
+        // 1. 乱れた自分のコマを治す手（優先度高）
+        for (let r = 0; r < BOARD_SIZE; r++) {
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                if (this.board[r][c] === 'w') {
+                    possibleMoves.push({ action: 'heal', r, c, weight: 8 });
+                }
+            }
+        }
+
+        // 2. 配置の手候補の収集
+        for (let r = 0; r < BOARD_SIZE; r++) {
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                if (this.board[r][c] === '.') {
+                    const canPlace = this.placedCount[player] === 0 || 
+                                     this.isFreePlace[player] || 
+                                     this.hasAdjacentOwnPiece(r, c, player);
+
+                    if (canPlace) {
+                        // 仮置きして得点変化や挟み込みをシミュレーション評価
+                        let weight = 5;
+                        
+                        // 中央付近を少し評価高めに
+                        const centerDist = Math.abs(r - 3) + Math.abs(c - 3);
+                        weight += (6 - centerDist);
+
+                        this.board[r][c] = 'W';
+                        const testScore = this.evaluatePlayer('W').score;
+                        weight += testScore * 10; // 得点が増える手を強く選ぶ
+                        this.board[r][c] = '.';
+
+                        possibleMoves.push({ action: 'place', r, c, weight });
+                    }
+                }
+            }
+        }
+
+        // 候補から最も重みの高い行動を選択（同率ならランダム）
+        if (possibleMoves.length > 0) {
+            possibleMoves.sort((a, b) => b.weight - a.weight);
+            const bestMove = possibleMoves[0];
+
+            if (bestMove.action === 'heal') {
+                this.board[bestMove.r][bestMove.c] = 'W';
+                this.log(`🤖 CPUが (${bestMove.r},${bestMove.c}) の毛並みを整えました。`);
+            } else if (bestMove.action === 'place') {
+                this.board[bestMove.r][bestMove.c] = 'W';
+                this.placedCount[player]++;
+                this.isFreePlace[player] = false;
+                this.applyFlanking(bestMove.r, bestMove.c, player);
+                this.log(`🤖 CPUが (${bestMove.r},${bestMove.c}) にコマを伸ばしました。`);
+            }
+        }
+
+        this.endTurn();
     }
 
     evaluatePlayer(player) {
@@ -305,10 +372,10 @@ class PhoelWebGame {
 
         const turnBadge = document.getElementById('current-turn-display');
         if (this.currentPlayer === 'B') {
-            turnBadge.textContent = '黒木 (B)';
+            turnBadge.textContent = 'あなた (黒木)';
             turnBadge.className = 'turn-badge b-turn';
         } else {
-            turnBadge.textContent = '白木 (W)';
+            turnBadge.textContent = 'CPU思考中...';
             turnBadge.className = 'turn-badge w-turn';
         }
     }
