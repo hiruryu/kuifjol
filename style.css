@@ -1,3 +1,5 @@
+
+
 :root {
     --bg-wood: #2c1a0e;
     --board-wood: #8c5a2b;
@@ -28,7 +30,7 @@ body {
     border-radius: 16px;
     padding: 24px;
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7);
-    max-width: 500px;
+    max-width: 540px;
     width: 100%;
     text-align: center;
 }
@@ -65,18 +67,11 @@ header h1 {
     background: rgba(255, 255, 255, 0.05);
 }
 
-.player-card h2 {
-    margin: 0 0 4px;
-    font-size: 1.1rem;
-}
-
+.player-card h2 { margin: 0 0 4px; font-size: 1.1rem; }
 .player-b h2 { color: #88d4f4; }
 .player-w h2 { color: #f4be88; }
 
-.score {
-    font-size: 1.1rem;
-    font-weight: bold;
-}
+.score { font-size: 1.1rem; font-weight: bold; }
 
 .yaku-list {
     font-size: 0.75rem;
@@ -104,7 +99,7 @@ header h1 {
     border: 1px solid #5c3a1b;
 }
 
-/* 盤面 */
+/* 盤面 (7x7用に最適化) */
 .board-area {
     display: flex;
     justify-content: center;
@@ -113,21 +108,21 @@ header h1 {
 
 .board {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    grid-template-rows: repeat(5, 1fr);
-    gap: 6px;
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: repeat(7, 1fr);
+    gap: 5px;
     background-color: var(--board-wood);
-    padding: 12px;
+    padding: 10px;
     border-radius: 12px;
     border: 4px solid var(--board-line);
     box-shadow: inset 0 0 12px rgba(0,0,0,0.5);
-    width: 320px;
-    height: 320px;
+    width: 350px;
+    height: 350px;
 }
 
 .cell {
     background-color: var(--cell-bg);
-    border-radius: 8px;
+    border-radius: 6px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -136,9 +131,7 @@ header h1 {
     box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), inset 0 -2px 4px rgba(0,0,0,0.4);
 }
 
-.cell:hover {
-    background-color: var(--cell-hover);
-}
+.cell:hover { background-color: var(--cell-hover); }
 
 .cell.selected {
     outline: 3px solid #f39c12;
@@ -147,16 +140,15 @@ header h1 {
 
 /* コマ表現 */
 .piece {
-    width: 80%;
-    height: 80%;
+    width: 82%;
+    height: 82%;
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 1.2rem;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+    font-size: 1rem;
+    box-shadow: 0 3px 5px rgba(0,0,0,0.5);
     position: relative;
-    transition: transform 0.3s;
 }
 
 .piece.black {
@@ -169,7 +161,7 @@ header h1 {
     color: #333;
 }
 
-/* 乱れコマ（小文字） */
+/* 乱れコマ */
 .piece.messed {
     opacity: 0.7;
     border: 2px dashed var(--messed-overlay);
@@ -177,7 +169,7 @@ header h1 {
 
 .piece.messed::after {
     content: "🌀";
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     position: absolute;
 }
 
@@ -214,7 +206,7 @@ header h1 {
     padding: 8px;
     border-radius: 6px;
     margin-bottom: 12px;
-    min-height: 20px;
+    min-height: 24px;
 }
 
 .reset-btn {
@@ -228,16 +220,20 @@ header h1 {
 
 .reset-btn:hover { background: #a83232; }
 
-/* 役の説明 */
+/* ルール解説スタイル */
 .game-rules {
-    margin-top: 20px;
+    margin-top: 24px;
     text-align: left;
-    background: rgba(0, 0, 0, 0.2);
-    padding: 12px 16px;
-    border-radius: 8px;
-    font-size: 0.8rem;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 16px;
+    border-radius: 10px;
+    border: 1px solid #5a381e;
+    font-size: 0.82rem;
+    line-height: 1.5;
 }
 
-.game-rules h3 { margin: 0 0 8px; color: var(--text-gold); }
+.game-rules h3 { margin: 0 0 8px; color: var(--text-gold); border-bottom: 1px dashed #7c522d; padding-bottom: 4px; }
+.game-rules h4 { margin: 12px 0 4px; color: #f4be88; }
+.rule-desc { margin: 0 0 8px; color: #d5cea3; }
 .game-rules ul { margin: 0; padding-left: 18px; }
 .game-rules li { margin-bottom: 4px; }
