@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kuifjol</title>
+    <title>『 Kuifjol 』</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,18 +14,18 @@
 
         <section class="status-panel">
             <div class="player-card player-b" id="card-B">
-                <h2>黒木 (B)</h2>
+                <h2>あなた (黒木)</h2>
                 <div class="score">得点: <span id="score-B">0</span> / 5</div>
                 <div class="yaku-list" id="yaku-B">役なし</div>
             </div>
 
             <div class="turn-indicator">
                 <p>現在の手番</p>
-                <div id="current-turn-display" class="turn-badge b-turn">黒木 (B)</div>
+                <div id="current-turn-display" class="turn-badge b-turn">あなた (黒木)</div>
             </div>
 
             <div class="player-card player-w" id="card-W">
-                <h2>白木 (W)</h2>
+                <h2>CPU (白木)</h2>
                 <div class="score">得点: <span id="score-W">0</span> / 5</div>
                 <div class="yaku-list" id="yaku-W">役なし</div>
             </div>
@@ -47,32 +47,29 @@
                     <span class="icon">🐾</span> たぐり寄せる (移動)
                 </button>
             </div>
-            <div id="message-log" class="message-log">行動を選び、盤面のマスを選択してください。</div>
+            <div id="message-log" class="message-log">あなたの番です。行動を選び盤面を押してください。</div>
             <button id="reset-btn" class="reset-btn">最初からやり直す</button>
         </section>
 
-<footer class="game-rules">
-            <h3>📜 『フォエル』の遊び方とルール</h3>
+        <footer class="game-rules">
+            <h3>📜 『 Kuifjol 』のルール</h3>
             <p class="rule-desc">
-                尾持つ民の伝統ゲームです。交互に手番を行い、自らのコマを「しっぽ」のように伸ばして綺麗な役（役尾）を作り、<strong>5点</strong>を先取するか「王尾」を完成させると勝利です。
+                交互に手番を行い、自らのコマを「しっぽ」のように伸ばして綺麗な役を作り、<strong>5点</strong>を先取するか「王尾」を完成させると勝利です。
             </p>
             
-            <h4>■ 手番でできること（1つ選択）</h4>
+            <h4>■ 手番でできること</h4>
             <ul>
-                <li><strong>伸ばす（配置）：</strong> 自分のコマに隣接する空きマスにコマを1つ置きます。※打てる場所がない場合はパスとなり、次の手番は自由な場所に置けます。</li>
-                <li><strong>整える（回復）：</strong> 相手に挟まれて乱された自分のコマ（🌀）を元の状態に戻します。</li>
-                <li><strong>たぐり寄せる（移動）：</strong> 自分のコマを1マス移動させます。</li>
+                <li><strong>伸ばす (配置):</strong> 自分のコマに隣接する空きマスに配置します。置けない場合はパスとなり、次の手番は自由に配置できます。</li>
+                <li><strong>整える (回復):</strong> 挟まれて乱れた自分のコマ(🌀)を元に戻します。</li>
+                <li><strong>たぐり寄せる (移動):</strong> 自分のコマを1マス移動させます。</li>
             </ul>
 
-            <h4>■ 挟み込み（毛並みを乱す）</h4>
-            <p class="rule-desc">自分のコマ2つで相手のコマを挟むと、相手のコマが乱れます（🌀）。乱れたコマは「整える」まで役の判定から外れます。</p>
-
-            <h4>■ 役（役尾）と点数一覧</h4>
+            <h4>■ 役（役尾）と点数</h4>
             <ul class="yaku-summary">
                 <li><strong>大輪 (1点):</strong> 自分の正常なコマで 2×2 の正方形を作る</li>
                 <li><strong>長尾 (2点):</strong> 自分の正常なコマが 6個以上 一本に繋がる</li>
                 <li><strong>花輪 (3点):</strong> 3×3 の領域で中央以外の8コマを囲む</li>
-                <li><strong>王尾 (即時勝利):</strong> 盤の端から反対側の端まで一筆書きで途切れず繋ぐ</li>
+                <li><strong>王尾 (即時勝利):</strong> 盤の端から反対側の端まで途切れず繋ぐ</li>
             </ul>
         </footer>
     </div>
