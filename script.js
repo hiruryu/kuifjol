@@ -43,7 +43,7 @@ class PhoelWebGame {
         this.selectedCell = null;
         this.isGameOver = false;
         this.lastPlacedCell = { 'B': null, 'W': null };
-        this.log('対戦を開始しました。あなたの番（黒木）です。');
+        this.log('対戦を開始しました。最初は中央4マスのいずれかに置いてください。');
         this.render();
     }
 
@@ -51,15 +51,31 @@ class PhoelWebGame {
         document.getElementById('message-log').textContent = msg;
     }
 
+    // マスが外枠（最外周）かどうか判定
     isOuterCell(r, c) {
         return r === 0 || r === BOARD_SIZE - 1 || c === 0 || c === BOARD_SIZE - 1;
+    }
+
+    // マスが「中央4マス」かどうか判定 (8x8の場合 index 3, 4)
+    isCenterCell(r, c) {
+        return (r === 3 || r === 4) && (c === 3 || c === 4);
+    }
+
+    // 盤面上に置かれているコマの総数をカウント
+    getTotalPieceCount() {
+        let count = 0;
+        for (let r = 0; r < BOARD_SIZE; r++) {
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                if (this.board[r][c] !== '.') count++;
+            }
+        }
+        return count;
     }
 
     isAdjacent(r1, c1, r2, c2) {
         return Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1;
     }
 
-    // 盤面が全て埋まっているか判定
     isBoardFull() {
         for (let r = 0; r < BOARD_SIZE; r++) {
             for (let c = 0; c < BOARD_SIZE; c++) {
@@ -69,13 +85,21 @@ class PhoelWebGame {
         return true;
     }
 
+    // 配置可能かチェック
     canPlaceAt(r, c, player) {
         if (this.board[r][c] !== '.') return false;
 
+        // ★ルール：盤面のコマが4個未満の時は「中央4マス」にしか置けない
+        if (this.getTotalPieceCount() < 4) {
+            return this.isCenterCell(r, c);
+        }
+
+        // 前回「外枠」に置いた場合、今回はその直前コマの隣にしか置けない
         const lastCell = this.lastPlacedCell[player];
         if (lastCell && this.isOuterCell(lastCell.r, lastCell.c)) {
             return this.isAdjacent(r, c, lastCell.r, lastCell.c);
         }
+
         return true;
     }
 
@@ -90,6 +114,8 @@ class PhoelWebGame {
             if (!this.canPlaceAt(r, c, player)) {
                 if (this.board[r][c] !== '.') {
                     this.log('❌ そこにはすでにコマがあります。');
+                } else if (this.getTotalPieceCount() < 4) {
+                    this.log('❌ 序盤（最初の4手まで）は「中央4マス（黄色のマス）」にしか置けません！');
                 } else {
                     const last = this.lastPlacedCell[player];
                     this.log(`❌ 前回外枠 (${last.r},${last.c}) に置いたため、その隣にしか置けません！`);
@@ -113,9 +139,9 @@ class PhoelWebGame {
                 this.log('❌ 自分の乱れたコマ(🌀)を選択してください。');
             }
 
-        } else if (this.currentAction === 'disrupt') { // ★ 新アクション：乱す (妨害)
+        } else if (this.currentAction === 'disrupt') {
             if (this.board[r][c] === opponent) {
-                this.board[r][c] = opponent.toLowerCase(); // 相手のコマを乱れ状態にする
+                this.board[r][c] = opponent.toLowerCase();
                 this.log(`🌀 (${r},${c}) にある相手のコマを乱しました！`);
                 this.endTurn();
             } else {
@@ -156,7 +182,6 @@ class PhoelWebGame {
         const scoreB = this.evaluatePlayer('B');
         const scoreW = this.evaluatePlayer('W');
 
-        // 1. 目標点到達 or 王尾完成による勝利判定
         if (scoreB.score >= WIN_SCORE || scoreW.score >= WIN_SCORE) {
             this.isGameOver = true;
             this.render();
@@ -165,7 +190,6 @@ class PhoelWebGame {
             return;
         }
 
-        // 2. 盤面が全部埋まった時の判定 ★追加★
         if (this.isBoardFull()) {
             this.isGameOver = true;
             this.render();
@@ -189,7 +213,7 @@ class PhoelWebGame {
     }
 
     /* ----------------------------------
-       CPU (白木) の思考AI（乱す行動も追加）
+       CPU (白木) の思考AI
        ---------------------------------- */
     playCPUTurn() {
         const player = 'W';
@@ -197,7 +221,7 @@ class PhoelWebGame {
 
         let possibleMoves = [];
 
-        // 1. 回復（自分が乱れていたら直す）
+        // 1. 回復
         for (let r = 0; r < BOARD_SIZE; r++) {
             for (let c = 0; c < BOARD_SIZE; c++) {
                 if (this.board[r][c] === 'w') {
@@ -224,11 +248,10 @@ class PhoelWebGame {
             }
         }
 
-        // 3. 乱す（相手の正常なコマを崩す）
+        // 3. 乱す
         for (let r = 0; r < BOARD_SIZE; r++) {
             for (let c = 0; c < BOARD_SIZE; c++) {
                 if (this.board[r][c] === opponent) {
-                    // 相手の点が自分より高い時や、役を作っていそうな時に狙う
                     let weight = 6;
                     possibleMoves.push({ action: 'disrupt', r, c, weight });
                 }
@@ -253,7 +276,6 @@ class PhoelWebGame {
                 this.log(`🤖 CPUが (${bestMove.r},${bestMove.c}) のあなたのコマを乱しました！`);
             }
         } else {
-            // 置ける場所もない場合はスキップ
             this.lastPlacedCell[player] = null;
             this.log('⚠️ CPUは行動できる場所がありません。');
         }
@@ -261,9 +283,6 @@ class PhoelWebGame {
         this.endTurn();
     }
 
-    /* ----------------------------------
-       役の評価処理
-       ---------------------------------- */
     evaluatePlayer(player) {
         let score = 0;
         let yaku = [];
@@ -401,6 +420,13 @@ class PhoelWebGame {
                 const cell = document.createElement('div');
                 cell.className = 'cell';
 
+                // マスの色分け用クラス付与
+                if (this.isCenterCell(r, c)) {
+                    cell.classList.add('center-cell');
+                } else if (this.isOuterCell(r, c)) {
+                    cell.classList.add('outer-cell');
+                }
+
                 const val = this.board[r][c];
                 if (val !== '.') {
                     const piece = document.createElement('div');
@@ -427,7 +453,9 @@ class PhoelWebGame {
         const turnBadge = document.getElementById('current-turn-display');
         if (this.currentPlayer === 'B') {
             const lastB = this.lastPlacedCell['B'];
-            if (lastB && this.isOuterCell(lastB.r, lastB.c)) {
+            if (this.getTotalPieceCount() < 4) {
+                turnBadge.textContent = 'あなた (中央に配置!)';
+            } else if (lastB && this.isOuterCell(lastB.r, lastB.c)) {
                 turnBadge.textContent = 'あなた (外枠拘束中!)';
             } else {
                 turnBadge.textContent = 'あなた (黒木)';
