@@ -36,17 +36,17 @@
         </main>
 
         <section class="controls">
-            <div class="action-selector">
-                <button class="action-btn active" data-action="place">
-                    <span class="icon">🌱</span> 伸ばす (配置)
-                </button>
-                <button class="action-btn" data-action="heal">
-                    <span class="icon">✨</span> 整える (回復)
-                </button>
-                <button class="action-btn" data-action="move">
-                    <span class="icon">🐾</span> たぐり寄せる (移動)
-                </button>
-            </div>
+<div class="action-selector">
+    <button class="action-btn active" data-action="place">
+        <span class="icon">🌱</span> 伸ばす (配置)
+    </button>
+    <button class="action-btn" data-action="heal">
+        <span class="icon">✨</span> 整える (回復)
+    </button>
+    <button class="action-btn" data-action="disrupt">
+        <span class="icon">🌀</span> 乱す (妨害)
+    </button>
+</div>
             <div id="message-log" class="message-log">あなたの番です。行動を選び盤面を押してください。</div>
             <button id="reset-btn" class="reset-btn">最初からやり直す</button>
         </section>
@@ -66,9 +66,9 @@
             
             <h4>■ 手番でできること</h4>
             <ul>
-                <li><strong>伸ばす (配置):</strong> マスを選んでコマを1つ置きます。</li>
-                <li><strong>整える (回復):</strong> 挟まれて乱れた自分のコマ(🌀)を元に戻します。</li>
-                <li><strong>たぐり寄せる (移動):</strong> 自分のコマを1マス移動させます。</li>
+                <li><strong>伸ばす:</strong> マスを選んでコマを1つ置きます。</li>
+                <li><strong>整える:</strong> 挟まれて乱れた自分のコマ(🌀)を元に戻します。</li>
+                <li><strong>乱す:</strong> 相手のコマ一つを乱します。</li>
             </ul>
 
             <h4>■ 役（役尾）と点数</h4>
@@ -76,7 +76,7 @@
                 <li><strong>大輪 (1点):</strong> 自分の正常なコマで 2×2 の正方形を作る</li>
                 <li><strong>長尾 (2点):</strong> 自分の正常なコマが 縦・横・斜めのいずれかで<strong>一直線に6個以上</strong>並ぶ</li>
                 <li><strong>花輪 (3点):</strong> 3×3 の領域で中央以外の8コマを囲む</li>
-                <li><strong>尾橋 (3点):</strong> 盤の端から反対側の端まで途切れず繋ぐ</li>
+                <li><strong>王尾(4点):</strong> 盤の端から反対側の端まで途切れず繋ぐ</li>
             </ul>
         </footer>
     </div>
