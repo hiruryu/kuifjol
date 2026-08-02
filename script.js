@@ -89,7 +89,7 @@ class PhoelWebGame {
     canPlaceAt(r, c, player) {
         if (this.board[r][c] !== '.') return false;
 
-        // ★ルール：盤面のコマが4個未満の時は「中央4マス」にしか置けない
+        // 盤面のコマが4個未満の時は「中央4マス」にしか置けない
         if (this.getTotalPieceCount() < 4) {
             return this.isCenterCell(r, c);
         }
@@ -212,76 +212,172 @@ class PhoelWebGame {
         }
     }
 
+    detectThreats(player) {
+    const threats = new Set();
+
+    // 大輪（2×2）未完成形：3/4揃っている
+    for (let r = 0; r < BOARD_SIZE - 1; r++) {
+        for (let c = 0; c < BOARD_SIZE - 1; c++) {
+            let count = 0;
+            let empty = null;
+            for (let dr = 0; dr < 2; dr++) {
+                for (let dc = 0; dc < 2; dc++) {
+                    const val = this.board[r+dr][c+dc];
+                    if (val === player) count++;
+                    else if (val === '.') empty = { r: r+dr, c: c+dc };
+                }
+            }
+            if (count === 3 && empty) {
+                threats.add(`${empty.r},${empty.c}`);
+            }
+        }
+    }
+
+    // 長尾（6連）未完成形：5連＋空き
+    const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+    for (let r = 0; r < BOARD_SIZE; r++) {
+        for (let c = 0; c < BOARD_SIZE; c++) {
+            dirs.forEach(([dr, dc]) => {
+                let count = 0;
+                let empty = null;
+                for (let step = 0; step < 6; step++) {
+                    const nr = r + dr*step;
+                    const nc = c + dc*step;
+                    if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) break;
+
+                    const val = this.board[nr][nc];
+                    if (val === player) count++;
+                    else if (val === '.') empty = { r: nr, c: nc };
+                    else break;
+                }
+                if (count === 5 && empty) {
+                    threats.add(`${empty.r},${empty.c}`);
+                }
+            });
+        }
+    }
+
+    // 花輪（3×3外枠）未完成形：7/8揃っている
+    for (let r = 0; r < BOARD_SIZE - 2; r++) {
+        for (let c = 0; c < BOARD_SIZE - 2; c++) {
+            let count = 0;
+            let empty = null;
+            for (let dr = 0; dr < 3; dr++) {
+                for (let dc = 0; dc < 3; dc++) {
+                    if (dr === 1 && dc === 1) continue;
+                    const val = this.board[r+dr][c+dc];
+                    if (val === player) count++;
+                    else if (val === '.') empty = { r: r+dr, c: c+dc };
+                }
+            }
+            if (count === 7 && empty) {
+                threats.add(`${empty.r},${empty.c}`);
+            }
+        }
+    }
+
+    return threats;
+}
+
     /* ----------------------------------
        CPU (白木) の思考AI
        ---------------------------------- */
     playCPUTurn() {
-        const player = 'W';
-        const opponent = 'B';
+    const player = 'W';
+    const opponent = 'B';
 
-        let possibleMoves = [];
+    let moves = [];
 
-        // 1. 回復
-        for (let r = 0; r < BOARD_SIZE; r++) {
-            for (let c = 0; c < BOARD_SIZE; c++) {
-                if (this.board[r][c] === 'w') {
-                    possibleMoves.push({ action: 'heal', r, c, weight: 8 });
-                }
+    // 役未完成形を検出する補助関数
+    const threats = this.detectThreats(opponent);
+    const chances = this.detectThreats(player);
+
+    // 1. 回復（価値は状況で変動）
+    for (let r = 0; r < BOARD_SIZE; r++) {
+        for (let c = 0; c < BOARD_SIZE; c++) {
+            if (this.board[r][c] === 'w') {
+                let weight = 10;
+                moves.push({ action: 'heal', r, c, weight });
             }
         }
-
-        // 2. 配置
-        for (let r = 0; r < BOARD_SIZE; r++) {
-            for (let c = 0; c < BOARD_SIZE; c++) {
-                if (this.canPlaceAt(r, c, player)) {
-                    let weight = 5;
-                    const centerDist = Math.abs(r - 3.5) + Math.abs(c - 3.5);
-                    weight += (7 - centerDist);
-
-                    this.board[r][c] = 'W';
-                    const testScore = this.evaluatePlayer('W').score;
-                    weight += testScore * 12;
-                    this.board[r][c] = '.';
-
-                    possibleMoves.push({ action: 'place', r, c, weight });
-                }
-            }
-        }
-
-        // 3. 乱す
-        for (let r = 0; r < BOARD_SIZE; r++) {
-            for (let c = 0; c < BOARD_SIZE; c++) {
-                if (this.board[r][c] === opponent) {
-                    let weight = 6;
-                    possibleMoves.push({ action: 'disrupt', r, c, weight });
-                }
-            }
-        }
-
-        if (possibleMoves.length > 0) {
-            possibleMoves.sort((a, b) => b.weight - a.weight);
-            const bestMove = possibleMoves[0];
-
-            if (bestMove.action === 'heal') {
-                this.board[bestMove.r][bestMove.c] = 'W';
-                this.log(`🤖 CPUが (${bestMove.r},${bestMove.c}) の毛並みを整えました。`);
-            } else if (bestMove.action === 'place') {
-                this.board[bestMove.r][bestMove.c] = 'W';
-                this.placedCount[player]++;
-                this.lastPlacedCell[player] = { r: bestMove.r, c: bestMove.c };
-                this.applyFlanking(bestMove.r, bestMove.c, player);
-                this.log(`🤖 CPUが (${bestMove.r},${bestMove.c}) にコマを置きました。`);
-            } else if (bestMove.action === 'disrupt') {
-                this.board[bestMove.r][bestMove.c] = opponent.toLowerCase();
-                this.log(`🤖 CPUが (${bestMove.r},${bestMove.c}) のあなたのコマを乱しました！`);
-            }
-        } else {
-            this.lastPlacedCell[player] = null;
-            this.log('⚠️ CPUは行動できる場所がありません。');
-        }
-
-        this.endTurn();
     }
+
+    // 2. 配置
+    for (let r = 0; r < BOARD_SIZE; r++) {
+        for (let c = 0; c < BOARD_SIZE; c++) {
+            if (!this.canPlaceAt(r, c, player)) continue;
+
+            let weight = 0;
+
+            // CPU自身の役形成チャンス
+            if (chances.has(`${r},${c}`)) {
+                weight += 40; // 役完成は最優先
+            }
+
+            // 黒木の役妨害
+            if (threats.has(`${r},${c}`)) {
+                weight += 50; // 妨害はさらに優先
+            }
+
+            // 中央に近いほど価値を上げる
+            const centerDist = Math.abs(r - 3.5) + Math.abs(c - 3.5);
+            weight += (7 - centerDist);
+
+            // 置いた後の得点を評価
+            this.board[r][c] = 'W';
+            const score = this.evaluatePlayer('W').score;
+            this.board[r][c] = '.';
+            weight += score * 10;
+
+            moves.push({ action: 'place', r, c, weight });
+        }
+    }
+
+    // 3. 乱し（役妨害の価値を反映）
+    for (let r = 0; r < BOARD_SIZE; r++) {
+        for (let c = 0; c < BOARD_SIZE; c++) {
+            if (this.board[r][c] === opponent) {
+                let weight = 5;
+
+                // 黒木の役未完成形の一部なら乱し価値UP
+                if (threats.has(`${r},${c}`)) {
+                    weight += 30;
+                }
+
+                moves.push({ action: 'disrupt', r, c, weight });
+            }
+        }
+    }
+
+    // 最良手を選択
+    moves.sort((a, b) => b.weight - a.weight);
+    const best = moves[0];
+
+    if (!best) {
+        this.log('⚠️ CPUは行動できる場所がありません。');
+        this.lastPlacedCell[player] = null;
+        this.endTurn();
+        return;
+    }
+
+    // 実行
+    if (best.action === 'heal') {
+        this.board[best.r][best.c] = 'W';
+        this.log(`🤖 CPUが (${best.r},${best.c}) の毛並みを整えました。`);
+    } else if (best.action === 'place') {
+        this.board[best.r][best.c] = 'W';
+        this.placedCount[player]++;
+        this.lastPlacedCell[player] = { r: best.r, c: best.c };
+        this.applyFlanking(best.r, best.c, player);
+        this.log(`🤖 CPUが (${best.r},${best.c}) にコマを置きました。`);
+    } else if (best.action === 'disrupt') {
+        this.board[best.r][best.c] = opponent.toLowerCase();
+        this.log(`🤖 CPUが (${best.r},${best.c}) のあなたのコマを乱しました！`);
+    }
+
+    this.endTurn();
+}
+
 
     evaluatePlayer(player) {
         let score = 0;
