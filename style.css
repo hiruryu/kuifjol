@@ -227,3 +227,16 @@ header h1 {
 .rule-desc { margin: 0 0 8px; color: #d5cea3; }
 .game-rules ul { margin: 0; padding-left: 18px; }
 .game-rules li { margin-bottom: 4px; }
+
+.cell.center-cell {
+    background-color: #fef3c7;
+    border: 2px solid #f59e0b;
+}
+
+.cell.outer-cell {
+    background-color: #e2e8f0;
+}
+
+.cell.center-cell:hover {
+    background-color: #fde68a;
+}
